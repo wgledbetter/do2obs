@@ -87,7 +87,7 @@ def main(dayOneFile: str = "test/do/Journal.json", obsidianFolder: str = "test/o
             obsidianPhotoLink = OBSIDIAN_PICTURE_LINK_FORMAT.format(
                 photoFile=obsPicRelPath
             )
-            t.replace(dayOnePhotoLink, obsidianPhotoLink)
+            t = t.replace(dayOnePhotoLink, obsidianPhotoLink)
 
         # Handle Audios ----------------------------------------------------------------
         # None, because I'm on Android.
@@ -116,6 +116,7 @@ def main(dayOneFile: str = "test/do/Journal.json", obsidianFolder: str = "test/o
         # Create and Write File --------------------------------------------------------
 
         mdContents = extendedMdFormatText(frontMatter + t)
+        mdContents = mdContents.replace("\[", "[").replace("\]", "]")
         with open(os.path.join(obsOutPath, obsName), "w") as obsOut:
             obsOut.write(mdContents)
 
