@@ -4,6 +4,7 @@ Other DayOne to Obsidian converters exist, but they don't really format stuff th
 
 ## Plan
 
-- [ ] Rename photos to YYYY-MM-DD-HHMM
-- [ ] Output files should be YYYY-MM-DD-HHMM.md
-- [ ] Location metadata should conform to the obsidian-map-view pattern
+- [X] Rename photos to YYYY-MM-DD-HHMM
+- [X] Output files should be YYYY-MM-DD-HHMM.md
+- [X] Location metadata should conform to the obsidian-map-view pattern
+- [ ] Create tags and frontmatter to indicate journal source
