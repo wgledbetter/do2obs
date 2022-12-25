@@ -83,9 +83,14 @@ def main(dayOneFile: str = "test/do/Journal.json", obsidianFolder: str = "test/o
             obsPicRelPath = os.path.join("photos", obsPicFName)
             obsPicFPath = os.path.abspath(os.path.join(obsidianFolder, obsPicRelPath))
             # Rename and copy to destination
-            with open(dayOnePicFPath, "rb") as inPic:
-                with open(obsPicFPath, "wb") as outPic:
-                    outPic.write(inPic.read())
+            try:
+                with open(dayOnePicFPath, "rb") as inPic:
+                    with open(obsPicFPath, "wb") as outPic:
+                        outPic.write(inPic.read())
+
+            except:
+                print("Bad image...")
+
             # Replace entry text with markdown link to new file
             obsidianPhotoLink = OBSIDIAN_PICTURE_LINK_FORMAT.format(
                 photoFile=obsPicRelPath
@@ -125,12 +130,11 @@ def main(dayOneFile: str = "test/do/Journal.json", obsidianFolder: str = "test/o
 
         # Handle Tags ------------------------------------------------------------------
 
-        jTag = "#" + journalName.lower()
-        tags = []
+        tags = ["#dayone", "#" + journalName.lower().replace(" ", "_")]
         for tg in e["tags"]:
             tags.append("#" + tg.replace(" ", "_"))
 
-        tagsSection = TAGS_SECTION_FORMAT.format(jTag + " " + " ".join(tags))
+        tagsSection = TAGS_SECTION_FORMAT.format(" ".join(tags))
 
         # Create and Write File --------------------------------------------------------
 
