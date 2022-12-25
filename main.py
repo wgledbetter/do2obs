@@ -27,6 +27,8 @@ DAYONE_MOMENT_FORMAT = "![](dayone-moment://{photoIdentifier})"
 
 OBSIDIAN_PICTURE_LINK_FORMAT = "![[{photoFile}]]"
 
+TAGS_SECTION_FORMAT = "## Tags\n{}"
+
 # Utilities ############################################################################
 
 
@@ -45,9 +47,10 @@ def main(dayOneFile: str = "test/do/Journal.json", obsidianFolder: str = "test/o
     obsidianFolder = os.path.abspath(obsidianFolder)
 
     dayOneRoot = os.path.dirname(dayOneFile)
+    journalName = os.path.basename(dayOneFile).split(".")[0]
 
     obsPhotoDir = pathlib.Path(os.path.abspath(os.path.join(obsidianFolder, "photos")))
-    obsPhotoDir.mkdir(exist_ok=True)
+    obsPhotoDir.mkdir(exist_ok=True, parents=True)
 
     dayOneEntries = []
     with open(dayOneFile, "r") as f:
@@ -94,6 +97,9 @@ def main(dayOneFile: str = "test/do/Journal.json", obsidianFolder: str = "test/o
         # I imagine it'd have a similar pattern to the photos, though.
 
         # Handle Metadata --------------------------------------------------------------
+        journalFrontMatter = "journal: {}".format(
+            "main" if journalName.lower() == "journal" else journalName.lower()
+        )
         if "location" in e:
             lat = e["location"]["latitude"]
             lon = e["location"]["longitude"]
@@ -107,15 +113,28 @@ def main(dayOneFile: str = "test/do/Journal.json", obsidianFolder: str = "test/o
                 addressFrontMatter = ""
 
             frontMatter = FRONT_MATTER_FORMAT.format(
-                yaml=locationFrontMatter + "\n" + addressFrontMatter
+                yaml=locationFrontMatter
+                + "\n"
+                + addressFrontMatter
+                + "\n"
+                + journalFrontMatter
             )
 
         else:
-            frontMatter = ""
+            frontMatter = FRONT_MATTER_FORMAT.format(yaml=journalFrontMatter)
+
+        # Handle Tags ------------------------------------------------------------------
+
+        jTag = "#" + journalName.lower()
+        tags = []
+        for tg in e["tags"]:
+            tags.append("#" + tg.replace(" ", "_"))
+
+        tagsSection = TAGS_SECTION_FORMAT.format(jTag + " " + " ".join(tags))
 
         # Create and Write File --------------------------------------------------------
 
-        mdContents = extendedMdFormatText(frontMatter + t)
+        mdContents = extendedMdFormatText(frontMatter + t + "\n" + tagsSection)
         mdContents = mdContents.replace("\[", "[").replace("\]", "]")
         with open(os.path.join(obsOutPath, obsName), "w") as obsOut:
             obsOut.write(mdContents)
