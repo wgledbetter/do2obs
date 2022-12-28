@@ -14,4 +14,6 @@ Other DayOne to Obsidian converters exist, but they don't really format stuff th
     - Search for `.json` and `.zip` files in given backup dir
     - Look for broken photo
     - Retry copy
-- [ ] Preserve stars
+- [X] Preserve stars
+  - Okay, so how does obsidian track starred entries?
+  - There's a `starred.json` file in the `.obsidian` folder.

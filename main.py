@@ -1,19 +1,13 @@
-import collections.abc
 import glob
 import json
 import os
 import pathlib
-from typing import Any
 from typing import List
 
 import fire
-import mdformat
 import mdformat_frontmatter
-from markdown_it.utils import OptionsDict
-from mdformat._util import NULL_CTX
 from mdformat._util import build_mdit
 from mdformat.renderer import MDRenderer
-from mdformat_frontmatter.plugin import _render_frontmatter
 from mdit_py_plugins.front_matter import front_matter_plugin
 
 # Format String Snippets ###############################################################
@@ -30,6 +24,17 @@ DAYONE_MOMENT_FORMAT = "![](dayone-moment://{photoIdentifier})"
 OBSIDIAN_PICTURE_LINK_FORMAT = "![[{photoFile}]]"
 
 TAGS_SECTION_FORMAT = "## Tags\n{}"
+
+# Misc #################################################################################
+
+
+def obsidianStar(noteTitle: str, vaultRelativePath: str) -> dict:
+    return {"type": "file", "title": noteTitle, "path": vaultRelativePath}
+
+
+def obsidianStarFile(stars: List[dict]) -> dict:
+    return {"items": stars}
+
 
 # Utilities ############################################################################
 
@@ -73,14 +78,35 @@ def main(
     obsidianFolder: str = "test/obs",
     dayOneBackupDirs: List[str] = ["/home/wgledbetter/pCloudSync/journal/"],
 ):
+    # Preliminary Path Setup -----------------------------------------------------------
     dayOneFile = os.path.abspath(dayOneFile)
     obsidianFolder = os.path.abspath(obsidianFolder)
+
+    print("Converting '{}' into '{}'.".format(dayOneFile, obsidianFolder))
 
     dayOneRoot = os.path.dirname(dayOneFile)
     journalName = os.path.basename(dayOneFile).split(".")[0]
 
     obsPhotoDir = pathlib.Path(os.path.abspath(os.path.join(obsidianFolder, "photos")))
     obsPhotoDir.mkdir(exist_ok=True, parents=True)
+
+    # Check if output is already an existing vault -------------------------------------
+    # Find a folder called .obsidian in the root or above
+    def getObsidianRoot(path: str):
+        if os.path.exists(os.path.join(path, ".obsidian")):
+            return path
+        elif os.path.dirname(path) != path:
+            return getObsidianRoot(os.path.dirname(path))
+        else:
+            return ""
+
+    obsidianRoot = getObsidianRoot(obsidianFolder)
+    if obsidianRoot == "":
+        print("WARNING: The obsidianFolder is not a vault or within a vault.")
+    else:
+        obsidianRoot = os.path.abspath(obsidianRoot)
+
+    # Read entries ---------------------------------------------------------------------
 
     dayOneEntries = []
     with open(dayOneFile, "r") as f:
@@ -100,7 +126,11 @@ def main(
         t = e["text"]
 
         # Handle Photos ----------------------------------------------------------------
-        nP = len(e["photos"])
+        if "photos" in e:
+            nP = len(e["photos"])
+        else:
+            nP = 0
+
         for i in range(nP):
             p = e["photos"][i]
             dayOnePhotoLink = DAYONE_MOMENT_FORMAT.format(
@@ -119,24 +149,17 @@ def main(
                         with open(dayOnePicFPath, "rb") as inPic:
                             outPic.write(inPic.read())
                     except:
-                        print(
-                            "Failed to open picture '{}' in initial directory. Looking in backups.".format(
-                                dayOnePicFName
-                            )
-                        )
                         for bud in dayOneBackupDirs:
                             bud = os.path.abspath(bud)
                             try:
-                                print("Trying backup directory: '{}'.".format(bud))
                                 outPic.write(
                                     recoverPhotoFromBackup(bud, dayOnePicFName)
                                 )
-                                print("Successful image recovery.")
                                 break
                             except:
                                 pass
                         else:
-                            print("Failed to recover image...")
+                            print("Failed to recover image {}.".format(dayOnePicFName))
 
             except:
                 # Output file open failed. Very strange
@@ -182,8 +205,9 @@ def main(
         # Handle Tags ------------------------------------------------------------------
 
         tags = ["#dayone", "#" + journalName.lower().replace(" ", "_")]
-        for tg in e["tags"]:
-            tags.append("#" + tg.replace(" ", "_"))
+        if "tags" in e:
+            for tg in e["tags"]:
+                tags.append("#" + tg.replace(" ", "_"))
 
         tagsSection = TAGS_SECTION_FORMAT.format(" ".join(tags))
 
@@ -193,6 +217,27 @@ def main(
         mdContents = mdContents.replace("\[", "[").replace("\]", "]")
         with open(os.path.join(obsOutPath, obsName), "w") as obsOut:
             obsOut.write(mdContents)
+
+        # Handle stars -----------------------------------------------------------------
+        if e["starred"] and obsidianRoot != "":
+            star = obsidianStar(
+                noteTitle=obsName.split(".")[0],
+                vaultRelativePath=os.path.relpath(
+                    os.path.join(obsOutPath, obsName), start=obsidianRoot
+                ),
+            )
+            starFile = os.path.join(obsidianRoot, ".obsidian", "starred.json")
+            if os.path.exists(starFile):
+                with open(starFile, "r") as sf:
+                    starDict = json.load(sf)
+                if star not in starDict["items"]:
+                    starDict["items"].append(star)
+
+            else:
+                starDict = obsidianStarFile(stars=[star])
+
+            with open(starFile, "w") as sf:
+                json.dump(starDict, sf, indent=2)
 
 
 # Run ##################################################################################
