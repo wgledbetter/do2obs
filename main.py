@@ -114,7 +114,10 @@ def main(
 
     for e in dayOneEntries:
         # Create output file -----------------------------------------------------------
-        obsName = e["creationDate"] + ".md"
+        obsFName = (
+            e["creationDate"].replace("T", "_").replace(":", "-").replace("Z", "")
+        )
+        obsName = obsFName + ".md"
         cYear = obsName[0:4]
         cMonth = obsName[5:7]
         obsOutPath = pathlib.Path(
@@ -139,7 +142,7 @@ def main(
             dayOnePicFName = p["md5"] + "." + p["type"]
             dayOnePicRelPath = os.path.join("photos", dayOnePicFName)
             dayOnePicFPath = os.path.abspath(os.path.join(dayOneRoot, dayOnePicRelPath))
-            obsPicFName = e["creationDate"] + "-{}.".format(i) + p["type"]
+            obsPicFName = obsFName + "_{}.".format(i) + p["type"]
             obsPicRelPath = os.path.join("photos", obsPicFName)
             obsPicFPath = os.path.abspath(os.path.join(obsidianFolder, obsPicRelPath))
             # Rename and copy to destination
@@ -221,7 +224,7 @@ def main(
         # Handle stars -----------------------------------------------------------------
         if e["starred"] and obsidianRoot != "":
             star = obsidianStar(
-                noteTitle=obsName.split(".")[0],
+                noteTitle=obsFName,
                 vaultRelativePath=os.path.relpath(
                     os.path.join(obsOutPath, obsName), start=obsidianRoot
                 ),
