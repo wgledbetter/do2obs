@@ -9,4 +9,9 @@ Other DayOne to Obsidian converters exist, but they don't really format stuff th
 - [X] Location metadata should conform to the obsidian-map-view pattern
 - [X] Create tags and frontmatter to indicate journal source
 - [X] Preserve tags
-- [ ] Prep script to combine DayOne backup zips
+- [X] Recover corrupted photos.
+  - Basic outline:
+    - Search for `.json` and `.zip` files in given backup dir
+    - Look for broken photo
+    - Retry copy
+- [ ] Preserve stars

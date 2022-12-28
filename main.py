@@ -1,8 +1,10 @@
 import collections.abc
+import glob
 import json
 import os
 import pathlib
 from typing import Any
+from typing import List
 
 import fire
 import mdformat
@@ -41,8 +43,36 @@ def extendedMdFormatText(md: str):
     return rendering
 
 
+def recoverPhotoFromBackup(
+    dayOneBackupDir: str, photoFName: str, journalName: str = ""
+):
+    if dayOneBackupDir[-1] != "/":
+        dayOneBackupDir = dayOneBackupDir + "/"
+
+    pFiles = [
+        f for f in glob.iglob(dayOneBackupDir + "**/" + photoFName, recursive=True)
+    ]
+
+    for p in pFiles:
+        try:
+            with open(p, "rb") as f:
+                return f.read()
+        except:
+            pass
+
+    raise ValueError(
+        "Unable to obtain image {} from backup directory '{}'.".format(
+            photoFName, dayOneBackupDir
+        )
+    )
+
+
 # Main #################################################################################
-def main(dayOneFile: str = "test/do/Journal.json", obsidianFolder: str = "test/obs"):
+def main(
+    dayOneFile: str = "/home/wgledbetter/pCloudSync/journal/3feb22/Export-Journal-3feb22/Export-Journal-3feb22/Journal.json",
+    obsidianFolder: str = "test/obs",
+    dayOneBackupDirs: List[str] = ["/home/wgledbetter/pCloudSync/journal/"],
+):
     dayOneFile = os.path.abspath(dayOneFile)
     obsidianFolder = os.path.abspath(obsidianFolder)
 
@@ -84,12 +114,33 @@ def main(dayOneFile: str = "test/do/Journal.json", obsidianFolder: str = "test/o
             obsPicFPath = os.path.abspath(os.path.join(obsidianFolder, obsPicRelPath))
             # Rename and copy to destination
             try:
-                with open(dayOnePicFPath, "rb") as inPic:
-                    with open(obsPicFPath, "wb") as outPic:
-                        outPic.write(inPic.read())
+                with open(obsPicFPath, "wb") as outPic:
+                    try:
+                        with open(dayOnePicFPath, "rb") as inPic:
+                            outPic.write(inPic.read())
+                    except:
+                        print(
+                            "Failed to open picture '{}' in initial directory. Looking in backups.".format(
+                                dayOnePicFName
+                            )
+                        )
+                        for bud in dayOneBackupDirs:
+                            bud = os.path.abspath(bud)
+                            try:
+                                print("Trying backup directory: '{}'.".format(bud))
+                                outPic.write(
+                                    recoverPhotoFromBackup(bud, dayOnePicFName)
+                                )
+                                print("Successful image recovery.")
+                                break
+                            except:
+                                pass
+                        else:
+                            print("Failed to recover image...")
 
             except:
-                print("Bad image...")
+                # Output file open failed. Very strange
+                print("Something is wrong with the output image file...")
 
             # Replace entry text with markdown link to new file
             obsidianPhotoLink = OBSIDIAN_PICTURE_LINK_FORMAT.format(
